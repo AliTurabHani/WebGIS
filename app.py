@@ -1,5 +1,6 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify
 import requests
+import time
 
 app = Flask(__name__, template_folder='template')
 
@@ -9,12 +10,8 @@ def index():
 
 @app.route('/aircraft_data')
 def aircraft_data():
-    latitude = request.args.get('latitude', type=float)
-    longitude = request.args.get('longitude', type=float)
-
-    if latitude is None or longitude is None:
-        return jsonify({"error": "Latitude and longitude parameters are required"}), 400
-
+    latitude = 57.2037  #  Airport latitude
+    longitude = 2.2  # Airport longitude
     radius = 200  # 200-mile radius
 
     api_url = f'http://api.airplanes.live/v2/point/{latitude}/{longitude}/{radius}'
@@ -28,9 +25,3 @@ def aircraft_data():
 
 if __name__ == '__main__':
     app.run(debug=True, port=8000, use_reloader=False)
-
-python WebMap.py
-
-
-
-    
