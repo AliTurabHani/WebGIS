@@ -19,6 +19,8 @@
             border: 1px solid #ccc;
             max-width: 300px;
             z-index: 1000;
+            /* Add a red border for debugging */
+            border: 2px solid red;
         }
     </style>
 </head>
@@ -29,110 +31,112 @@
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script>
-        var map = L.map('map').setView([57.2, 2.2], 6);
+        $(document).ready(function() {
+            var map = L.map('map').setView([57.2, 2.2], 6);
 
-        // OpenStreetMap layer (default)
-        var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+            // OpenStreetMap layer (default)
+            var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
 
-        // Satellite layer
-        var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-            attribution: '© Esri'
-        });
+            // Satellite layer
+            var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri'
+            });
 
-        var baseLayers = {
-            'OpenStreetMap': osmLayer,
-            'Satellite': satelliteLayer
-        };
+            var baseLayers = {
+                'OpenStreetMap': osmLayer,
+                'Satellite': satelliteLayer
+            };
 
-        L.control.layers(baseLayers).addTo(map);
+            L.control.layers(baseLayers).addTo(map);
 
-        var aircraftMarkers = L.layerGroup().addTo(map);
-        var infoPanel = $('#info-panel');
+            var aircraftMarkers = L.layerGroup().addTo(map);
+            var infoPanel = $('#info-panel');
 
-        function updateAircraftData() {
-            $.get('/aircraft_data', function (data) {
-                aircraftMarkers.clearLayers();
+            function updateAircraftData() {
+                $.get('/aircraft_data', function (data) {
+                    aircraftMarkers.clearLayers();
 
-                data['ac'].forEach(function (aircraft) {
-                    // Exclude the specific aircraft with hex code "424a71"
-                    if (aircraft['hex'] === '424a71') {
-                        return;
-                    }
-
-                    var altitude = aircraft['alt_baro'];
-                    var heading = aircraft['true_heading'] || aircraft['mag_heading'] || aircraft['track'] || 0;
-
-                    var iconPath = 'https://i.postimg.cc/JhQL3djG/plane.png';
-
-                    if (aircraft['t']) {
-                        var aircraftType = aircraft['t'].toLowerCase();
-
-                        if (aircraftType === 's92' || aircraftType === 'ec75') {
-                            iconPath = 'https://i.postimg.cc/HL5k52kN/military-helicopter.png';
+                    data['ac'].forEach(function (aircraft) {
+                        // Exclude the specific aircraft with hex code "424a71"
+                        if (aircraft['hex'] === '424a71') {
+                            return;
                         }
-                    }
 
-                    var popupText = 'Hex: ' + aircraft['hex'] + '<br>Flight: ' + aircraft['flight'] + '<br>Altitude: ' + altitude;
+                        var altitude = aircraft['alt_baro'];
+                        var heading = aircraft['true_heading'] || aircraft['mag_heading'] || aircraft['track'] || 0;
 
-                    var marker = L.marker([aircraft['lat'], aircraft['lon']], {
-                        icon: L.divIcon({
-                            className: 'rotate-icon',
-                            html: '<img src="' + iconPath + '" style="transform: rotate(' + heading + 'deg);" width="32" height="32">',
-                            iconSize: [32, 32],
-                            iconAnchor: [16, 16],
-                        }),
-                    }).bindPopup(popupText);
+                        var iconPath = 'https://i.postimg.cc/JhQL3djG/plane.png';
 
-                    marker.addTo(aircraftMarkers);
+                        if (aircraft['t']) {
+                            var aircraftType = aircraft['t'].toLowerCase();
 
-                    // Change event from 'popupopen' to 'click'
-                    marker.on('click', function (event) {
-                        displayAircraftInfo(aircraft);
-                    });
+                            if (aircraftType === 's92' || aircraftType === 'ec75') {
+                                iconPath = 'https://i.postimg.cc/HL5k52kN/military-helicopter.png';
+                            }
+                        }
 
-                    // Change event from 'popupopen' to 'mouseover'
-                    marker.on('mouseover', function (event) {
-                        marker.openPopup();
-                    });
+                        var popupText = 'Hex: ' + aircraft['hex'] + '<br>Flight: ' + aircraft['flight'] + '<br>Altitude: ' + altitude;
 
-                    // Close popup on mouseout (optional)
-                    marker.on('mouseout', function (event) {
-                        map.closePopup();
+                        var marker = L.marker([aircraft['lat'], aircraft['lon']], {
+                            icon: L.divIcon({
+                                className: 'rotate-icon',
+                                html: '<img src="' + iconPath + '" style="transform: rotate(' + heading + 'deg);" width="32" height="32">',
+                                iconSize: [32, 32],
+                                iconAnchor: [16, 16],
+                            }),
+                        }).bindPopup(popupText);
+
+                        marker.addTo(aircraftMarkers);
+
+                        // Change event from 'popupopen' to 'click'
+                        marker.on('click', function (event) {
+                            displayAircraftInfo(aircraft);
+                        });
+
+                        // Change event from 'popupopen' to 'mouseover'
+                        marker.on('mouseover', function (event) {
+                            marker.openPopup();
+                        });
+
+                        // Close popup on mouseout (optional)
+                        marker.on('mouseout', function (event) {
+                            map.closePopup();
+                        });
                     });
                 });
-            });
-        }
-
-        function displayAircraftInfo(aircraft) {
-            var altitude = aircraft['alt_baro'];
-            var heading = aircraft['true_heading'] || aircraft['mag_heading'] || aircraft['track'] || 0;
-
-            var iconPath = 'https://i.postimg.cc/JhQL3djG/plane.png';
-
-            if (aircraft['t']) {
-                var aircraftType = aircraft['t'].toLowerCase();
-
-                if (aircraftType === 's92' || aircraftType === 'ec75') {
-                    iconPath = 'https://i.postimg.cc/HL5k52kN/military-helicopter.png';
-                }
             }
 
-            var aircraftInfo = `
-                <strong>Hex:</strong> ${aircraft['hex']}<br>
-                <strong>Flight:</strong> ${aircraft['flight']}<br>
-                <strong>Altitude:</strong> ${altitude}<br>
-                <strong>Heading:</strong> ${heading}&deg;<br>
-                <img src="${iconPath}" width="32" height="32" style="transform: rotate(${heading}deg);" alt="Aircraft Icon">
-            `;
+            function displayAircraftInfo(aircraft) {
+                var altitude = aircraft['alt_baro'];
+                var heading = aircraft['true_heading'] || aircraft['mag_heading'] || aircraft['track'] || 0;
 
-            infoPanel.html(aircraftInfo);
-        }
+                var iconPath = 'https://i.postimg.cc/JhQL3djG/plane.png';
 
-        updateAircraftData();
+                if (aircraft['t']) {
+                    var aircraftType = aircraft['t'].toLowerCase();
 
-        setInterval(updateAircraftData, 600);
+                    if (aircraftType === 's92' || aircraftType === 'ec75') {
+                        iconPath = 'https://i.postimg.cc/HL5k52kN/military-helicopter.png';
+                    }
+                }
+
+                var aircraftInfo = `
+                    <strong>Hex:</strong> ${aircraft['hex']}<br>
+                    <strong>Flight:</strong> ${aircraft['flight']}<br>
+                    <strong>Altitude:</strong> ${altitude}<br>
+                    <strong>Heading:</strong> ${heading}&deg;<br>
+                    <img src="${iconPath}" width="32" height="32" style="transform: rotate(${heading}deg);" alt="Aircraft Icon">
+                `;
+
+                infoPanel.html(aircraftInfo);
+            }
+
+            updateAircraftData();
+
+            setInterval(updateAircraftData, 600);
+        });
     </script>
 </body>
 </html>
